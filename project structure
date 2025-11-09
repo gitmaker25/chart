@@ -1,0 +1,11 @@
+stock_app/
+│
+├─ backend/
+│   ├─ app.py          # Flask backend to handle API requests
+│   └─ kite_api.py     # Kite Connect / paper trading functions
+│
+├─ frontend/
+│   └─ dashboard.py    # Streamlit frontend
+│
+├─ requirements.txt    # Dependencies
+└─ README.md
