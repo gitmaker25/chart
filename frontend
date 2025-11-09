@@ -1,0 +1,26 @@
+# pip install streamlit requests
+import streamlit as st
+import requests
+
+API_URL = "http://localhost:5000"
+
+st.title("Stock App 🚀")
+
+# --- Get LTP ---
+symbol = st.text_input("Enter Symbol (NSE:INFY)", "NSE:INFY")
+if st.button("Get LTP"):
+    res = requests.get(f"{API_URL}/ltp", params={"symbol": symbol}).json()
+    st.write(f"💰 LTP of {symbol}: {res['ltp']}")
+
+# --- Buy Stock ---
+st.subheader("Buy Stock")
+buy_symbol = st.text_input("Symbol to Buy", "NSE:INFY")
+qty = st.number_input("Quantity", min_value=1, value=1)
+if st.button("Buy"):
+    res = requests.post(f"{API_URL}/buy", json={"symbol": buy_symbol, "qty": qty}).json()
+    st.success(res["message"])
+
+# --- Portfolio ---
+if st.button("Show Portfolio"):
+    res = requests.get(f"{API_URL}/portfolio").json()
+    st.write(res)
