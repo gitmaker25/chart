@@ -1,0 +1,45 @@
+# pip install kiteconnect
+try:
+    from kiteconnect import KiteConnect
+except:
+    pass  # KiteConnect optional if using paper trading
+
+import os
+
+# ------ CONFIG ------
+API_KEY = os.environ.get("KITE_API_KEY", "YOUR_API_KEY")
+API_SECRET = os.environ.get("KITE_API_SECRET", "YOUR_API_SECRET")
+
+# For paper trading fallback
+portfolio = {}
+
+# Initialize Kite Connect
+kite = None
+try:
+    kite = KiteConnect(api_key=API_KEY)
+except:
+    print("KiteConnect not installed or keys missing. Using paper-trade mode.")
+
+# ------ FUNCTIONS ------
+def get_ltp(symbol="NSE:INFY"):
+    """Return last traded price"""
+    if kite:
+        ltp = kite.ltp(symbol)
+        return ltp[symbol]["last_price"]
+    else:
+        # Paper trade dummy value
+        return 1000.0
+
+def buy_stock(symbol, qty):
+    """Buy stock (paper trade if Kite unavailable)"""
+    if kite:
+        # Example: place market order (uncomment in real scenario)
+        # kite.place_order(tradingsymbol=symbol, exchange="NSE", transaction_type="BUY", quantity=qty, order_type="MARKET", product="CNC")
+        return f"Order placed to BUY {qty} of {symbol}"
+    else:
+        # Paper trade simulation
+        portfolio[symbol] = portfolio.get(symbol, 0) + qty
+        return f"Paper trade: Bought {qty} of {symbol}"
+
+def get_portfolio():
+    return portfolio
