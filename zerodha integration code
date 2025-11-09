@@ -1,0 +1,171 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
+from datetime import datetime, timedelta
+import yfinance as yf
+import requests
+import pyotp
+from kiteconnect import KiteConnect
+import json
+
+# Page configuration
+st.set_page_config(
+    page_title="Indian Market Chart Analyzer",
+    page_icon="📈",
+    layout="wide"
+)
+
+# Title and description
+st.title("🇮🇳 Indian Market Chart Analyzer + Zerodha")
+st.markdown("Comprehensive technical analysis with Zerodha integration")
+
+# Zerodha Login Section
+st.sidebar.title("Zerodha Integration")
+
+# Initialize session state for Zerodha
+if 'zerodha_logged_in' not in st.session_state:
+    st.session_state.zerodha_logged_in = False
+if 'kite' not in st.session_state:
+    st.session_state.kite = None
+
+def zerodha_login():
+    try:
+        # Zerodha API credentials (you should use st.secrets in production)
+        api_key = st.sidebar.text_input("API Key", type="password")
+        api_secret = st.sidebar.text_input("API Secret", type="password")
+        request_token = st.sidebar.text_input("Request Token")
+        
+        if st.sidebar.button("Connect Zerodha") and api_key and api_secret and request_token:
+            kite = KiteConnect(api_key=api_key)
+            data = kite.generate_session(request_token, api_secret=api_secret)
+            st.session_state.kite = kite
+            st.session_state.zerodha_logged_in = True
+            st.sidebar.success("✅ Zerodha Connected Successfully!")
+            
+    except Exception as e:
+        st.sidebar.error(f"Login failed: {e}")
+
+# Zerodha login form
+if not st.session_state.zerodha_logged_in:
+    zerodha_login()
+else:
+    st.sidebar.success("✅ Zerodha Connected")
+    if st.sidebar.button("Disconnect Zerodha"):
+        st.session_state.zerodha_logged_in = False
+        st.session_state.kite = None
+        st.rerun()
+
+# Sidebar for navigation
+st.sidebar.title("Navigation")
+page = st.sidebar.selectbox(
+    "Choose a page:",
+    ["Market Overview", "Stock Analysis", "Technical Scanner", "Zerodha Trading", "Learning Center"]
+)
+
+# Sample data function
+def get_sample_data():
+    dates = pd.date_range(start='2024-01-01', end=datetime.now(), freq='D')
+    data = pd.DataFrame({
+        'Date': dates,
+        'Open': np.random.normal(100, 10, len(dates)),
+        'High': np.random.normal(105, 10, len(dates)),
+        'Low': np.random.normal(95, 10, len(dates)),
+        'Close': np.random.normal(102, 10, len(dates)),
+        'Volume': np.random.randint(100000, 1000000, len(dates))
+    })
+    return data
+
+# Market Overview Page
+if page == "Market Overview":
+    st.header("Market Overview")
+    
+    # Market indices
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("NIFTY 50", "22,000", "+1.5%")
+    with col2:
+        st.metric("SENSEX", "73,500", "+1.2%")
+    with col3:
+        st.metric("BANK NIFTY", "48,000", "+2.1%")
+    
+    # Sample chart
+    data = get_sample_data()
+    fig = go.Figure(data=[go.Candlestick(
+        x=data['Date'],
+        open=data['Open'],
+        high=data['High'],
+        low=data['Low'],
+        close=data['Close']
+    )])
+    st.plotly_chart(fig, use_container_width=True)
+
+# Stock Analysis Page
+elif page == "Stock Analysis":
+    st.header("Stock Analysis")
+    
+    stock_symbol = st.text_input("Enter Stock Symbol (e.g., RELIANCE.NS, TCS.NS):", "RELIANCE.NS")
+    
+    if stock_symbol:
+        try:
+            stock = yf.Ticker(stock_symbol)
+            hist = stock.history(period="6mo")
+            
+            if not hist.empty:
+                # Display basic info
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Current Price", f"₹{hist['Close'][-1]:.2f}")
+                with col2:
+                    change = hist['Close'][-1] - hist['Close'][-2]
+                    st.metric("Change", f"₹{change:.2f}")
+                with col3:
+                    st.metric("Volume", f"{hist['Volume'][-1]:,}")
+                
+                # Candlestick chart
+                fig = go.Figure(data=[go.Candlestick(
+                    x=hist.index,
+                    open=hist['Open'],
+                    high=hist['High'],
+                    low=hist['Low'],
+                    close=hist['Close'],
+                    name=stock_symbol
+                )])
+                fig.update_layout(title=f"{stock_symbol} Price Chart")
+                st.plotly_chart(fig, use_container_width=True)
+                
+            else:
+                st.error("No data found for this symbol")
+                
+        except Exception as e:
+            st.error(f"Error fetching data: {e}")
+
+# Zerodha Trading Page
+elif page == "Zerodha Trading":
+    st.header("Zerodha Trading")
+    
+    if st.session_state.zerodha_logged_in:
+        try:
+            # Get portfolio
+            portfolio = st.session_state.kite.positions()
+            holdings = st.session_state.kite.holdings()
+            
+            st.subheader("Portfolio Overview")
+            
+            # Display portfolio summary
+            if portfolio['net']:
+                st.write(f"Total Holdings: {len(portfolio['net'])}")
+                
+                # Create a simple portfolio table
+                portfolio_data = []
+                for holding in portfolio['net']:
+                    portfolio_data.append({
+                        'Symbol': holding['tradingsymbol'],
+                        'Quantity': holding['quantity'],
+                        'Average Price': holding['average_price'],
+                        'Current Price': holding['last_price'],
+                        'P&L': holding['pnl']
+                    })
+                
+                if portfolio_data:
+                    st.dataframe(pd.DataFrame(portfolio_data))
