@@ -12,3 +12,10 @@ yfinance
 requests
 pyotp
 kiteconnect
+streamlit
+pandas
+numpy
+plotly
+yfinance
+requests
+ta-lib
