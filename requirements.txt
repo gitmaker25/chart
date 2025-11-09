@@ -4,3 +4,11 @@ numpy
 plotly
 yfinance
 requests
+streamlit
+pandas
+numpy
+plotly
+yfinance
+requests
+pyotp
+kiteconnect
